@@ -2,6 +2,7 @@ package com.school.sba.serviceImpl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import com.school.sba.Enum.UserRole;
 import com.school.sba.entity.AcademicProgram;
 import com.school.sba.entity.School;
+import com.school.sba.entity.Subject;
 import com.school.sba.entity.User;
 import com.school.sba.exception.IllegalArgumentException;
 import com.school.sba.exception.UserNotFoundByIdException;
@@ -60,31 +62,44 @@ public class AcademicProgramServiceImpl implements AcademicProgramService {
 	}
 	@Override
 	public ResponseEntity<ResponseStructure<AcademicProgramResponse>> assignTeachersStudentsToAcademicProgram(
-			int programId, int userId) {
-		return userRepository.findById(userId).map(user->{
-			if(user.isDeleated()==true)
-				throw new UserNotFoundByIdException("UserId has already been deleated!!!");
-			if(user.getUserRole().equals(UserRole.ADMIN)) {
-				throw new IllegalArgumentException("Admin cannot be added to AcademicProgram");
-			}else {
-				AcademicProgram academicProgram = academicProgramRepository.findById(programId).get();
-				user.getAcademicProgram().add(academicProgram);
-				academicProgram.getUser().add(user);
-				userRepository.save(user);
-				academicProgramRepository.save(academicProgram);
-				List<String> lists = new ArrayList<String>();
-				List<User> list = academicProgram.getUser();
-				for(User user2:list) {
-					lists.add(user2.getUserName());
-				}
-				ResponseStructure<AcademicProgramResponse> responseStructure = new ResponseStructure<AcademicProgramResponse>();
-				responseStructure.setStatus(HttpStatus.OK.value());
-				responseStructure.setMessage("Assigned AcademicProgram successfully!!!");
-				responseStructure.setData(mapToResponseList(academicProgram, lists));
-				return new ResponseEntity<ResponseStructure<AcademicProgramResponse>>(responseStructure, HttpStatus.OK);
-			}
-		}).orElseThrow(()->new IllegalArgumentException("User Does Not Exist!!!"));
+	        int programId, int userId) {
+	    return userRepository.findById(userId).map(user -> {
+	        if (user.isDeleated()) {
+	            throw new UserNotFoundByIdException("UserId has already been deleted!!!");
+	        }
+	        if (user.getUserRole().equals(UserRole.ADMIN)) {
+	            throw new IllegalArgumentException("Admin cannot be added to AcademicProgram");
+	        } else if (user.getUserRole().equals(UserRole.TEACHER)) {
+	            // Additional validation for teachers
+	            AcademicProgram academicProgram = academicProgramRepository.findById(programId).get();
+	            
+	            // Check if the teacher teaches one of the subjects offered by the academic program
+	            Subject teacherSubject = user.getSubject();
+	            if (!academicProgram.getSubjects().contains(teacherSubject)) {
+	                throw new IllegalArgumentException("Teacher does not teach a relevant subject for the Academic Program");
+	            }
+	        }
+
+	        AcademicProgram academicProgram = academicProgramRepository.findById(programId).orElseThrow(() ->
+	                new IllegalArgumentException("Academic Program with ID " + programId + " does not exist!!!"));
+
+	        user.getAcademicProgram().add(academicProgram);
+	        academicProgram.getUser().add(user);
+	        userRepository.save(user);
+	        academicProgramRepository.save(academicProgram);
+
+	        List<String> lists = academicProgram.getUser().stream()
+	                .map(User::getUserName)
+	                .collect(Collectors.toList());
+
+	        ResponseStructure<AcademicProgramResponse> responseStructure = new ResponseStructure<>();
+	        responseStructure.setStatus(HttpStatus.OK.value());
+	        responseStructure.setMessage("Assigned AcademicProgram successfully!!!");
+	        responseStructure.setData(mapToResponseList(academicProgram, lists));
+	        return new ResponseEntity<>(responseStructure, HttpStatus.OK);
+	    }).orElseThrow(() -> new IllegalArgumentException("User Does Not Exist!!!"));
 	}
+
 	private AcademicProgramResponse mapToResponseList(AcademicProgram academicProgram, List<String> lists) {
 		return AcademicProgramResponse.builder()
 				.programId(academicProgram.getProgramId())

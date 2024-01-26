@@ -1,5 +1,6 @@
 package com.school.sba.responseDTO;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -16,7 +17,7 @@ public class AcademicProgramResponse {
 	private int programId;
 	private String programName;
 	private ProgramType programType;
-	private LocalTime beginsAt;
-	private LocalTime endsAt;
+	private LocalDate beginsAt;
+	private LocalDate endsAt;
 	private List<String> user;
 }

@@ -53,6 +53,8 @@ public class UserServiceImp implements UserService {
 	public ResponseEntity<ResponseStructure<UserResponce>> saveUser(UserRequest userRequest) {
 		if (userRepository.existsByUserRole(UserRole.ADMIN)) {
 			Optional<User> opuser=userRepository.findByUserRole(UserRole.ADMIN);
+			System.err.println(opuser.get().getSchool().getSchoolName());
+			
 			userRequest.setSchool(opuser.get().getSchool());
 			User user = userRepository.save(mapToUser(userRequest));
 			ResponseStructure<UserResponce> responseStructure = new ResponseStructure<UserResponce>();
@@ -148,7 +150,9 @@ public class UserServiceImp implements UserService {
 		return User.builder().userName(userRequest.getUserName()).userContactNo(userRequest.getUserContactNo())
 				.userEmail(userRequest.getUserEmail()).password(encoded.encode(userRequest.getPassword()))
 				.firstName(userRequest.getFirstName()).lastName(userRequest.getLastName())
-				.userRole(userRequest.getUserRole()).build();
+				.userRole(userRequest.getUserRole())
+				.school(userRequest.getSchool())
+				.subject(userRequest.getSubject()).build();
 	}
 
 }

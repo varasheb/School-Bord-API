@@ -3,6 +3,7 @@ package com.school.sba.requestDTO;
 import com.school.sba.Enum.UserRole;
 //import com.school.sba.entity.School;
 import com.school.sba.entity.School;
+import com.school.sba.entity.Subject;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
@@ -31,4 +32,5 @@ public class UserRequest {
 	private String userEmail;
 	private  UserRole userRole;
 	private School school;
+	private Subject subject;
 }
