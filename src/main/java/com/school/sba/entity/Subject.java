@@ -31,8 +31,8 @@ public class Subject {
 	private String subjectName;
 	@ManyToMany
 	private List<AcademicProgram> academyProgram;
-	@OneToMany
+	@OneToMany(mappedBy = "subject")
 	private List<User> user;
-	@ManyToOne
-	private ClassHour classHour;
+	@OneToMany(mappedBy = "subject")
+	private List<ClassHour> classHourlist;
 }

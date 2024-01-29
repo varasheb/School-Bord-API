@@ -23,6 +23,7 @@ import com.school.sba.entity.Subject;
 import com.school.sba.entity.User;
 import com.school.sba.exception.IllegalArgumentException;
 import com.school.sba.exception.UserNotFoundByIdException;
+import com.school.sba.mapper.UserMapper;
 import com.school.sba.repository.AcademicProgramRepository;
 import com.school.sba.repository.ClassHourRepository;
 import com.school.sba.repository.SubjectRepository;
@@ -41,6 +42,8 @@ public class ClassHourServiceImpl implements ClassHourService {
 	private SubjectRepository subjectRepo;
 	@Autowired
 	private UserRepository userRepo;
+	@Autowired
+	private UserMapper usermapper;
 
 	@Autowired
 	private AcademicProgramRepository academicProgramRepository;
@@ -111,12 +114,6 @@ public class ClassHourServiceImpl implements ClassHourService {
 		return new ResponseEntity<>(responseStructure, HttpStatus.CREATED);
 	}
 
-	private ClassHourResponse mapToResponse(ClassHour classHour) {
-		return ClassHourResponse.builder().classHourId(classHour.getClassHourId()).beginsAt(classHour.getBeginsAt())
-				.endsAt(classHour.getEndsAt()).roomNo(classHour.getRoomNo()).classStatus(classHour.getClassStatus())
-				.build();
-	}
-
 	@Override
 	public ResponseEntity<ResponseStructure<List<ClassHourResponse>>> updateClassHour(List<ClassHourDTO> classHourDtoList) {
 		List<ClassHourResponse> updatedClassHourResponses = new ArrayList<>();
@@ -125,6 +122,7 @@ public class ClassHourServiceImpl implements ClassHourService {
 			ClassHour existingClassHour =classHourRepo.findById(classHourDTO.getClassHourID()).get();
 			Subject subject=subjectRepo.findById(classHourDTO.getSubjectId()).get();
 			User teacher=userRepo.findById(classHourDTO.getTeacherId()).get();
+			if(existingClassHour.getClassStatus()==ClassStatus.NOT_SCHEDULED)
 			if(existingClassHour!=null&&subject!=null&&teacher!=null&&teacher.getUserRole().equals(UserRole.TEACHER)) {
 				if((teacher.getSubject()).equals(subject))
 				existingClassHour.setSubject(subject);
@@ -141,10 +139,14 @@ public class ClassHourServiceImpl implements ClassHourService {
 				    existingClassHour.setClassStatus(ClassStatus.SCHEDULED);
 				}
 				existingClassHour=classHourRepo.save(existingClassHour);
-
-				updatedClassHourResponses.add(mapToResponse(existingClassHour));
+				ClassHourResponse response=mapToResponse(existingClassHour);
+				response.setSubject(existingClassHour.getSubject().getSubjectName());
+				response.setTeacher(usermapper.mapToResponse(teacher));
+				updatedClassHourResponses.add(response);
 			} else {
 				throw new IllegalArgumentException("Invalid ClassHourID or Invalid User or Invalid Subject");
+			} else {
+				throw new IllegalArgumentException("Class is already Sheduled");
 			}
 		});
 		ResponseStructure<List<ClassHourResponse>> responseStructure = new ResponseStructure<>();
@@ -153,6 +155,12 @@ public class ClassHourServiceImpl implements ClassHourService {
 		responseStructure.setData(updatedClassHourResponses);
 
 		return new ResponseEntity<>(responseStructure, HttpStatus.CREATED);
+	}
+	
+	private ClassHourResponse mapToResponse(ClassHour classHour) {
+		return ClassHourResponse.builder().classHourId(classHour.getClassHourId()).beginsAt(classHour.getBeginsAt())
+				.endsAt(classHour.getEndsAt()).roomNo(classHour.getRoomNo()).classStatus(classHour.getClassStatus())
+				.build();
 	}
 
 }

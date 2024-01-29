@@ -47,6 +47,6 @@ public class User {
 	private List<AcademicProgram> academicProgram;
 	@ManyToOne
 	private Subject subject;
-	@ManyToOne
-	private ClassHour classHour;
+	@OneToMany(mappedBy = "user")
+	private List<ClassHour> classHourlist;
 }
