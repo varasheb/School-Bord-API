@@ -10,6 +10,8 @@ import com.school.sba.Enum.ClassStatus;
 import com.school.sba.Enum.UserRole;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -34,6 +36,7 @@ public class ClassHour {
 	private LocalDateTime beginsAt;
 	private LocalDateTime endsAt;
 	private String roomNo;
+	@Enumerated(EnumType.STRING)
 	private ClassStatus classStatus;
 	@ManyToOne
 	private User user;

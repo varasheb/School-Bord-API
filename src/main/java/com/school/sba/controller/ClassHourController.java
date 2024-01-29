@@ -7,9 +7,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.school.sba.requestDTO.ClassHourDTO;
+import com.school.sba.requestDTO.ScheduleldRequest;
 import com.school.sba.responseDTO.ClassHourResponse;
+import com.school.sba.responseDTO.ScheduleldResponse;
 import com.school.sba.service.ClassHourService;
 import com.school.sba.util.ResponseStructure;
 
@@ -22,5 +28,11 @@ public class ClassHourController {
 	@PreAuthorize("hasAuthority('ADMIN')")
 	public ResponseEntity<ResponseStructure<List<ClassHourResponse>>> createsClassHour(@PathVariable int programId) {
 		return classhourService.createClassHoursForWeek(programId);
+	}
+	
+	@PutMapping("/class-hours")
+	@PreAuthorize("hasAuthority('ADMIN')")
+	public ResponseEntity<ResponseStructure<List<ClassHourResponse>>> updateClassHour(@RequestBody List<ClassHourDTO> classHourDT0list) {
+		return classhourService.updateClassHour(classHourDT0list);
 	}
 }
