@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 
 import com.school.sba.requestDTO.AcademicProgramRequest;
 import com.school.sba.responseDTO.AcademicProgramResponse;
+import com.school.sba.responseDTO.UserResponce;
 import com.school.sba.util.ResponseStructure;
 
 public interface AcademicProgramService {
@@ -18,4 +19,9 @@ public interface AcademicProgramService {
 	ResponseEntity<ResponseStructure<AcademicProgramResponse>> assignTeachersStudentsToAcademicProgram(int programId,
 			int userId);
 
+	ResponseEntity<ResponseStructure<List<UserResponce>>> fetchUsersByRoleInAcademicProgram(int programId, String role);
+
+	ResponseEntity<ResponseStructure<AcademicProgramResponse>> deleteById(int academicProgramId);
+	
+	void permantDelete();
 }

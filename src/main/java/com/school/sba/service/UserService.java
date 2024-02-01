@@ -22,5 +22,6 @@ public interface UserService {
 	ResponseEntity<ResponseStructure<UserResponce>> updateUser(int userId, UserRequest userrequest);
 
 	ResponseEntity<ResponseStructure<UserResponce>> saveUserAdmin(@Valid UserRequest userRequest);
-
+    
+	void permantDelete();
 }

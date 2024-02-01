@@ -84,7 +84,6 @@ public class SubjectServiceImpl implements SubjectService {
 	private Subject mapToSubject(SubjectRequest subjectRequest, AcademicProgram academicProgram) {
 		return Subject.builder()
 				.subjectName(subjectRequest.getSubjectName())
-				.academyProgram(academicProgramRepository.findAll())
 				.build();
 	}
 }

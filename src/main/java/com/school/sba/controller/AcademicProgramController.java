@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.school.sba.requestDTO.AcademicProgramRequest;
 import com.school.sba.responseDTO.AcademicProgramResponse;
+import com.school.sba.responseDTO.UserResponce;
 import com.school.sba.service.AcademicProgramService;
 import com.school.sba.util.ResponseStructure;
 
@@ -34,5 +36,14 @@ public class AcademicProgramController {
 	@PreAuthorize("hasAuthority('ADMIN')")
 	public ResponseEntity<ResponseStructure<AcademicProgramResponse>> assignTeachersStudentsToAcademicProgram(@PathVariable int programId, @PathVariable int userId){
 		return academicProgramService.assignTeachersStudentsToAcademicProgram(programId, userId);
+	}
+	@GetMapping("/academic-programs/{programId}/user-roles/{role}/users")
+	public ResponseEntity<ResponseStructure<List<UserResponce>>> fetchUsersByRoleInAcademicProgram(@PathVariable int programId,@PathVariable String role){
+		return academicProgramService.fetchUsersByRoleInAcademicProgram(programId,role);
+	}
+	@DeleteMapping("academic-programs/{programId}")
+	@PreAuthorize("hasAuthority('ADMIN')")
+	public ResponseEntity<ResponseStructure<AcademicProgramResponse>> deleteById(@PathVariable int programId){
+		return academicProgramService.deleteById(programId);
 	}
 }

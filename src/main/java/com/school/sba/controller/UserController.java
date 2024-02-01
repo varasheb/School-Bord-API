@@ -28,7 +28,7 @@ public class UserController {
 	public ResponseEntity<ResponseStructure<UserResponce>> saveUserAdmin(@RequestBody @Valid UserRequest userRequest){
 		return userService.saveUserAdmin(userRequest);
 	}
-	@PostMapping("users")
+	@PostMapping("user")
 	public ResponseEntity<ResponseStructure<UserResponce>> saveUser(@RequestBody @Valid UserRequest userRequest){
 		return userService.saveUser(userRequest);
 	}

@@ -4,10 +4,12 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
+import org.hibernate.annotations.Cascade;
 import org.springframework.stereotype.Component;
 
 import com.school.sba.Enum.ProgramType;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -39,12 +41,13 @@ public class AcademicProgram {
 	private ProgramType programType;
 	private LocalDate beginsAt;
 	private LocalDate endsAt;
+	private boolean isDeleted;
 	@ManyToOne
 	private School school;
 	@ManyToMany
 	private List<Subject> subjects;
 	@ManyToMany
 	private List<User> user;
-	@OneToMany(mappedBy = "academicProgram")
+	@OneToMany(mappedBy = "academicProgram",cascade = CascadeType.REMOVE)
 	private List<ClassHour> classHour;
 }

@@ -35,6 +35,4 @@ public class Scheduleld {
 	private Duration breakLengthInMin;
 	private LocalTime lunchTime;
 	private Duration lunchLengthInMin;
-	@OneToOne(mappedBy = "scheduleld")
-	private School school;
 }

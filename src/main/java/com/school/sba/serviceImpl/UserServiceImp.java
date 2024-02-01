@@ -14,6 +14,8 @@ import com.school.sba.entity.User;
 import com.school.sba.exception.AdminFoundException;
 import com.school.sba.exception.IllegalArgumentException;
 import com.school.sba.exception.UserNotFoundByIdException;
+import com.school.sba.repository.AcademicProgramRepository;
+import com.school.sba.repository.ClassHourRepository;
 import com.school.sba.repository.SchoolRepository;
 import com.school.sba.repository.SubjectRepository;
 import com.school.sba.repository.UserRepository;
@@ -24,6 +26,7 @@ import com.school.sba.responseDTO.UserResponce;
 import com.school.sba.service.UserService;
 import com.school.sba.util.ResponseStructure;
 
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 
 @Service
@@ -33,7 +36,9 @@ public class UserServiceImp implements UserService {
 	@Autowired
 	private SubjectRepository subjectRepository;
 	@Autowired
-	private SchoolRepository schoolRepository;
+	private ClassHourRepository classHourRepo;
+	@Autowired
+	private AcademicProgramRepository academicRepo;
 	@Autowired
 	private PasswordEncoder encoded;
 
@@ -44,7 +49,7 @@ public class UserServiceImp implements UserService {
 			ResponseStructure<UserResponce> responseStructure = new ResponseStructure<UserResponce>();
 			responseStructure.setStatus(HttpStatus.CREATED.value());
 			responseStructure.setMessage("Saved Successfully!!!");
-			responseStructure.setData(mapToResponse(user));
+			responseStructure.setData(mapToAdmin(user));
 			return new ResponseEntity<ResponseStructure<UserResponce>>(responseStructure, HttpStatus.CREATED);
 		}else
 			throw new AdminFoundException("Admin already exist");
@@ -60,7 +65,7 @@ public class UserServiceImp implements UserService {
 			ResponseStructure<UserResponce> responseStructure = new ResponseStructure<UserResponce>();
 			responseStructure.setStatus(HttpStatus.CREATED.value());
 			responseStructure.setMessage("Saved Successfully!!!");
-			responseStructure.setData(mapToResponse(user));
+			responseStructure.setData(mapToAdmin(user));
 			return new ResponseEntity<ResponseStructure<UserResponce>>(responseStructure, HttpStatus.CREATED);
 		}else
 			throw new AdminFoundException("No admin exist");
@@ -71,7 +76,7 @@ public class UserServiceImp implements UserService {
 	public ResponseEntity<ResponseStructure<UserResponce>> fetchById(int userId) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new UserNotFoundByIdException("UserId does not exist!!!"));
-		if (user.isDeleated() == true) {
+		if (user.isDeleted() == true) {
 			throw new UserNotFoundByIdException("UserId has already been deleated!!!");
 		} else {
 			ResponseStructure<UserResponce> responseStructure = new ResponseStructure<UserResponce>();
@@ -86,10 +91,12 @@ public class UserServiceImp implements UserService {
 	public ResponseEntity<ResponseStructure<UserResponce>> deleteById(int userId) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new UserNotFoundByIdException("UserId does not exist!!!"));
-		if (user.isDeleated() == true) {
+		if(user.getUserRole().equals(UserRole.ADMIN)){
+			throw new IllegalArgumentException("Admin cannot Be Deleted!!");
+		}else if (user.isDeleted() == true) {
 			throw new UserNotFoundByIdException("UserId has already been deleated!!!");
 		} else {
-			user.setDeleated(true);
+			user.setDeleted(true);
 			userRepository.save(user);
 			ResponseStructure<UserResponce> responseStructure = new ResponseStructure<UserResponce>();
 			responseStructure.setStatus(HttpStatus.OK.value());
@@ -117,13 +124,12 @@ public class UserServiceImp implements UserService {
 	public ResponseEntity<ResponseStructure<UserResponce>> addSubjectToTheTeacher(int subjectId, int userId) {
 		return subjectRepository.findById(subjectId).map(subject -> {
 			User user = userRepository.findById(userId).get();
-			if (user.isDeleated() == true)
+			if (user.isDeleted() == true)
 				throw new UserNotFoundByIdException("UserId has already been deleated!!!");
 			if (user.getUserRole().equals(UserRole.TEACHER)) {
 				if (user.getSubject() == null) {
 					user.setSubject(subject);
 					userRepository.save(user);
-					subject.getUser().add(user);
 					ResponseStructure<UserResponce> responseStructure = new ResponseStructure<UserResponce>();
 					responseStructure.setStatus(HttpStatus.OK.value());
 					responseStructure.setMessage("User Id deleted successfully!!!");
@@ -138,11 +144,17 @@ public class UserServiceImp implements UserService {
 		}).orElseThrow(() -> new IllegalArgumentException("Subject Does Not Exist!!!"));
 	}
 
+	private UserResponce mapToAdmin(User user) {
+		return UserResponce.builder().userId(user.getUserId()).userName(user.getUserName())
+				.userEmail(user.getUserEmail()).userContactNo(user.getUserContactNo()).userRole(user.getUserRole())
+				.firstName(user.getFirstName()).lastName(user.getLastName())
+				.build();
+	}
 	private UserResponce mapToResponse(User user) {
 		return UserResponce.builder().userId(user.getUserId()).userName(user.getUserName())
 				.userEmail(user.getUserEmail()).userContactNo(user.getUserContactNo()).userRole(user.getUserRole())
 				.firstName(user.getFirstName()).lastName(user.getLastName())
-//				.subject(user.getSubject().getSubjectName())
+				.subject(user.getSubject().getSubjectName())
 				.build();
 	}
 
@@ -153,6 +165,24 @@ public class UserServiceImp implements UserService {
 				.userRole(userRequest.getUserRole())
 				.school(userRequest.getSchool())
 				.subject(userRequest.getSubject()).build();
+	}
+	@Transactional
+	@Override
+	public void permantDelete() {
+		userRepository.findByIsDeleted(true).forEach(user -> {
+	        if (user.isDeleted()) {
+	            user.getAcademicProgram().forEach(program->{
+	            	program.getUser().remove(user);
+	            	academicRepo.save(program);
+	            });
+	            user.getClassHourlist().forEach(classHour->{
+	            	classHour.setUser(null);
+	            	classHourRepo.save(classHour);
+	            });
+	            userRepository.delete(user);
+	        }
+	    });
+		
 	}
 
 }

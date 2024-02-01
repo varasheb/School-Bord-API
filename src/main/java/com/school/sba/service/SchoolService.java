@@ -12,5 +12,9 @@ import com.school.sba.util.ResponseStructure;
 public interface SchoolService {
 	
 	public ResponseEntity<ResponseStructure<SchoolResponce>> adminCreatesSchool(int userId, SchoolRequest schoolRequest);
+
+	public ResponseEntity<ResponseStructure<SchoolResponce>> deleteById(int schoolId);
+
+	public void permantDelete();
 	
 }

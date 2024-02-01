@@ -34,6 +34,7 @@ public class School {
 	@Column(unique = true)
 	private String schoolEmailId;
 	private String schoolAddress;
+	private boolean isDeleted;
 	@OneToOne
 	private Scheduleld scheduleld;
 	@OneToMany(mappedBy = "school")

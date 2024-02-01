@@ -29,4 +29,5 @@ public class SubjectController {
 	public ResponseEntity<ResponseStructure<List<SubjectResponse>>> fetchAllSubjects(){
 		return subjectService.fetchAllSubjects();
 	}
+	
 }

@@ -29,10 +29,5 @@ public class Subject {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private int subjectId;
 	private String subjectName;
-	@ManyToMany
-	private List<AcademicProgram> academyProgram;
-	@OneToMany(mappedBy = "subject")
-	private List<User> user;
-	@OneToMany(mappedBy = "subject")
-	private List<ClassHour> classHourlist;
+	
 }

@@ -16,13 +16,19 @@ import com.school.sba.entity.Subject;
 import com.school.sba.entity.User;
 import com.school.sba.exception.IllegalArgumentException;
 import com.school.sba.exception.UserNotFoundByIdException;
+import com.school.sba.exception.UserNotFoundByRoleException;
+import com.school.sba.mapper.UserMapper;
 import com.school.sba.repository.AcademicProgramRepository;
+import com.school.sba.repository.ClassHourRepository;
 import com.school.sba.repository.SchoolRepository;
 import com.school.sba.repository.UserRepository;
 import com.school.sba.requestDTO.AcademicProgramRequest;
 import com.school.sba.responseDTO.AcademicProgramResponse;
+import com.school.sba.responseDTO.UserResponce;
 import com.school.sba.service.AcademicProgramService;
 import com.school.sba.util.ResponseStructure;
+
+import jakarta.transaction.Transactional;
 @Service
 public class AcademicProgramServiceImpl implements AcademicProgramService {
 	@Autowired
@@ -31,6 +37,11 @@ public class AcademicProgramServiceImpl implements AcademicProgramService {
 	private SchoolRepository schoolRepository;
 	@Autowired
 	private UserRepository userRepository;
+	@Autowired
+	private UserMapper usermapper;
+	@Autowired
+	private ClassHourRepository classHourRepo;
+	
 	@Override
 	public ResponseEntity<ResponseStructure<AcademicProgramResponse>> addsAcademicProgram(int schoolId,
 			AcademicProgramRequest academicProgramRequest) {
@@ -41,7 +52,7 @@ public class AcademicProgramServiceImpl implements AcademicProgramService {
 			ResponseStructure<AcademicProgramResponse> responseStructure = new ResponseStructure<AcademicProgramResponse>();
 			responseStructure.setStatus(HttpStatus.CREATED.value());
 			responseStructure.setMessage("AcademicProgram created successfully!!!");
-			responseStructure.setData(mapToResponse(academicProgram));
+			responseStructure.setData(mapToResponse(academicProgram,false));
 			return new ResponseEntity<ResponseStructure<AcademicProgramResponse>>(responseStructure, HttpStatus.CREATED);
 		}).orElseThrow(()->new IllegalArgumentException("School Does Not Exist!!!"));
 	}
@@ -51,7 +62,7 @@ public class AcademicProgramServiceImpl implements AcademicProgramService {
 			List<AcademicProgram> list = school.getAcademicProgram();
 			List<AcademicProgramResponse> academicProgramList = new ArrayList<AcademicProgramResponse>();
 			for(AcademicProgram a:list) {
-				academicProgramList.add(mapToResponse(a));
+				academicProgramList.add(mapToResponse(a,false));
 			}
 			ResponseStructure<List<AcademicProgramResponse>> responseStructure = new ResponseStructure<List<AcademicProgramResponse>>();
 			responseStructure.setStatus(HttpStatus.OK.value());
@@ -64,7 +75,7 @@ public class AcademicProgramServiceImpl implements AcademicProgramService {
 	public ResponseEntity<ResponseStructure<AcademicProgramResponse>> assignTeachersStudentsToAcademicProgram(
 	        int programId, int userId) {
 	    return userRepository.findById(userId).map(user -> {
-	        if (user.isDeleated()) {
+	        if (user.isDeleted()) {
 	            throw new UserNotFoundByIdException("UserId has already been deleted!!!");
 	        }
 	        if (user.getUserRole().equals(UserRole.ADMIN)) {
@@ -100,6 +111,56 @@ public class AcademicProgramServiceImpl implements AcademicProgramService {
 	    }).orElseThrow(() -> new IllegalArgumentException("User Does Not Exist!!!"));
 	}
 
+	@Override
+	public ResponseEntity<ResponseStructure<List<UserResponce>>> fetchUsersByRoleInAcademicProgram(int programId, String role) {
+	    if ("admin".equalsIgnoreCase(role)) {
+	        throw new IllegalArgumentException("Cannot fetch users with role 'admin'");
+	    }
+
+	    AcademicProgram academicProgram = academicProgramRepository.findById(programId)
+	            .orElseThrow(() -> new IllegalArgumentException("Academic Program not found with id: " + programId));
+
+	    List<User> users = userRepository.findByUserRoleAndAcademicProgram(UserRole.valueOf(role.toUpperCase()), academicProgram);
+
+	    if (users.isEmpty()) {
+	        throw new UserNotFoundByRoleException("No users found with role '" + role + "' in academic program with id: " + programId);
+	    }
+
+	    List<UserResponce> userResponses = users.stream()
+	            .map(usermapper::mapToResponse)
+	            .collect(Collectors.toList());
+
+	    ResponseStructure<List<UserResponce>> responseStructure = new ResponseStructure<>();
+	    responseStructure.setStatus(HttpStatus.OK.value());
+	    responseStructure.setMessage("Fetched successfully!!!");
+	    responseStructure.setData(userResponses);
+
+	    return new ResponseEntity<>(responseStructure, HttpStatus.OK);
+	}
+	@Override
+	public ResponseEntity<ResponseStructure<AcademicProgramResponse>> deleteById(int academicProgramId) {
+
+		return academicProgramRepository.findById(academicProgramId)
+				.map(academicProgram -> {
+					academicProgram.setDeleted(true);
+					//					repository.deleteById(userId);
+					academicProgramRepository.save(academicProgram);
+					ResponseStructure<AcademicProgramResponse> structure=new ResponseStructure<>();
+					structure.setStatus(HttpStatus.OK.value());
+					structure.setMessage("Academic Program deleted successfully");
+					structure.setData(mapToResponse(academicProgram,true));
+
+					return new ResponseEntity<>(structure, HttpStatus.OK);
+				}).orElseThrow(()->new IllegalArgumentException("Academic Program not found by id"));
+	}
+    @Transactional
+	@Override
+	public void permantDelete() {
+		List<AcademicProgram> programs = academicProgramRepository.findByIsDeleted(true);
+	    programs.forEach(program -> classHourRepo.deleteAll(program.getClassHour()));
+	    academicProgramRepository.deleteAll(programs);
+	}
+	
 	private AcademicProgramResponse mapToResponseList(AcademicProgram academicProgram, List<String> lists) {
 		return AcademicProgramResponse.builder()
 				.programId(academicProgram.getProgramId())
@@ -110,7 +171,7 @@ public class AcademicProgramServiceImpl implements AcademicProgramService {
 				.user(lists)
 				.build();
 	}
-	private AcademicProgramResponse mapToResponse(AcademicProgram academicProgram) {
+	private AcademicProgramResponse mapToResponse(AcademicProgram academicProgram,boolean isDeleted) {
 		return AcademicProgramResponse.builder()
 				.programId(academicProgram.getProgramId())
 				.beginsAt(academicProgram.getBeginsAt())
@@ -128,4 +189,5 @@ public class AcademicProgramServiceImpl implements AcademicProgramService {
 				.school(school)
 				.build();
 	}
+
 }

@@ -54,7 +54,7 @@ public class ScheduleldServiceImpl implements ScheduleldService {
 	public ResponseEntity<ResponseStructure<ScheduleldResponse>> updateScheduleById(int scheduleldId,
 			ScheduleldRequest scheduleldRequest) {
 		return scheduleldRepository.findById(scheduleldId).map(scheduleld->{
-			scheduleldRepository.save(mapToUpdate(scheduleldId, scheduleld.getSchool(), scheduleldRequest));
+			scheduleldRepository.save(mapToUpdate(scheduleldId, scheduleldRequest));
 			ResponseStructure<ScheduleldResponse> responseStructure = new ResponseStructure<ScheduleldResponse>();
 			responseStructure.setStatus(HttpStatus.OK.value());
 			responseStructure.setMessage("Scheduleld Updated successfully!!!!");
@@ -62,7 +62,7 @@ public class ScheduleldServiceImpl implements ScheduleldService {
 			return new ResponseEntity<ResponseStructure<ScheduleldResponse>>(responseStructure, HttpStatus.CREATED);
 		}).orElseThrow(()->new IllegalArgumentException("Scheduleld Does Not Exist!!!"));
 	}
-	private Scheduleld mapToUpdate(int scheduleldId, School school, ScheduleldRequest scheduleldRequest) {
+	private Scheduleld mapToUpdate(int scheduleldId, ScheduleldRequest scheduleldRequest) {
 		return Scheduleld.builder()
 				.scheduleld(scheduleldId)
 				.breakLengthInMin(Duration.ofMinutes(scheduleldRequest.getBreakLengthInMin()))
@@ -73,7 +73,6 @@ public class ScheduleldServiceImpl implements ScheduleldService {
 				.opensAt(scheduleldRequest.getOpensAt())
 				.lunchLengthInMin(Duration.ofMinutes(scheduleldRequest.getLunchLengthInMin()))
 				.lunchTime(scheduleldRequest.getLunchTime())
-				.school(school)
 				.build();
 	}
 	private ScheduleldResponse mapToResponse(Scheduleld scheduleld) {
@@ -99,7 +98,6 @@ public class ScheduleldServiceImpl implements ScheduleldService {
 				.opensAt(scheduleldRequest.getOpensAt())
 				.lunchLengthInMin(Duration.ofMinutes(scheduleldRequest.getLunchLengthInMin()))
 				.lunchTime(scheduleldRequest.getLunchTime())
-				.school(school)
 				.build();
 	}
 }

@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.school.sba.Enum.UserRole;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -40,7 +41,7 @@ public class User {
 	private String userEmail;
 	@Enumerated(EnumType.STRING)
 	private  UserRole userRole;
-	private boolean isDeleated;
+	private boolean isDeleted;
 	@ManyToOne
 	private School school;
 	@ManyToMany(mappedBy = "user")

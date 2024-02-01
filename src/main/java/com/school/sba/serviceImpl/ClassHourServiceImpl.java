@@ -30,6 +30,7 @@ import com.school.sba.repository.SubjectRepository;
 import com.school.sba.repository.UserRepository;
 import com.school.sba.requestDTO.ClassHourDTO;
 import com.school.sba.responseDTO.ClassHourResponse;
+import com.school.sba.responseDTO.UserResponce;
 import com.school.sba.service.ClassHourService;
 import com.school.sba.util.ResponseStructure;
 
@@ -161,6 +162,16 @@ public class ClassHourServiceImpl implements ClassHourService {
 		return ClassHourResponse.builder().classHourId(classHour.getClassHourId()).beginsAt(classHour.getBeginsAt())
 				.endsAt(classHour.getEndsAt()).roomNo(classHour.getRoomNo()).classStatus(classHour.getClassStatus())
 				.build();
+	}
+
+	@Override
+	public ResponseEntity<ResponseStructure<String>> deleteAll() {
+		classHourRepo.deleteAll();
+		ResponseStructure<String> responseStructure = new ResponseStructure<String>();
+		responseStructure.setStatus(HttpStatus.OK.value());
+		responseStructure.setMessage("classHour deleted successfully!!!");
+		responseStructure.setData("All ClassHour Deleted");
+		return new ResponseEntity<ResponseStructure<String>>(responseStructure, HttpStatus.OK);
 	}
 
 }
