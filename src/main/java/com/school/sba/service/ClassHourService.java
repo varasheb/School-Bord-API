@@ -16,4 +16,6 @@ public interface ClassHourService {
 
 	ResponseEntity<ResponseStructure<String>> deleteAll();
 
+	ResponseEntity<ResponseStructure<List<ClassHourResponse>>> repeatClassHour();
+
 }

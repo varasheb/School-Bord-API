@@ -38,4 +38,9 @@ public class ClassHourController {
     public ResponseEntity<ResponseStructure<String>> deleteAll(){
 		return classhourService.deleteAll();
 	}
+	@PostMapping("/class-hours/repeat")
+	@PreAuthorize("hasAuthority('ADMIN')")
+	public ResponseEntity<ResponseStructure<List<ClassHourResponse>>> repeatClassHour() {
+		return classhourService.repeatClassHour();
+	}
 }

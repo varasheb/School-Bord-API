@@ -1,9 +1,11 @@
 package com.school.sba.serviceImpl;
 
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -22,7 +24,6 @@ import com.school.sba.entity.Scheduleld;
 import com.school.sba.entity.Subject;
 import com.school.sba.entity.User;
 import com.school.sba.exception.IllegalArgumentException;
-import com.school.sba.exception.UserNotFoundByIdException;
 import com.school.sba.mapper.UserMapper;
 import com.school.sba.repository.AcademicProgramRepository;
 import com.school.sba.repository.ClassHourRepository;
@@ -30,7 +31,6 @@ import com.school.sba.repository.SubjectRepository;
 import com.school.sba.repository.UserRepository;
 import com.school.sba.requestDTO.ClassHourDTO;
 import com.school.sba.responseDTO.ClassHourResponse;
-import com.school.sba.responseDTO.UserResponce;
 import com.school.sba.service.ClassHourService;
 import com.school.sba.util.ResponseStructure;
 
@@ -50,47 +50,52 @@ public class ClassHourServiceImpl implements ClassHourService {
 	private AcademicProgramRepository academicProgramRepository;
 
 	private List<ClassHour> generateClassHoursForWeek(AcademicProgram program, LocalDate startingDate) {
-		List<ClassHour> classHours = new ArrayList<>();
-		Scheduleld schedule = program.getSchool().getScheduleld();
-		Duration classDuration = schedule.getClassHourLengthInMin();
-		Duration lunchDuration = schedule.getLunchLengthInMin();
-		Duration breakDuration = schedule.getBreakLengthInMin();
-		LocalTime breakTime = schedule.getBreakTime();
-		LocalTime lunchTime = schedule.getLunchTime();
-		Duration topUp = Duration.ofMinutes(2);
+	    List<ClassHour> classHours = new ArrayList<>();
+	    Scheduleld schedule = program.getSchool().getScheduleld();
+	    Duration classDuration = schedule.getClassHourLengthInMin();
+	    Duration lunchDuration = schedule.getLunchLengthInMin();
+	    Duration breakDuration = schedule.getBreakLengthInMin();
+	    LocalTime breakTime = schedule.getBreakTime();
+	    LocalTime lunchTime = schedule.getLunchTime();
+	    Duration topUp = Duration.ofMinutes(2);
 
-		for (int dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+	    // Find the next Monday from the starting date
+	    LocalDate nextMonday = startingDate.with(TemporalAdjusters.next(DayOfWeek.MONDAY));
 
-			LocalDate currentDate = startingDate.plusDays(dayOfWeek);
-			LocalTime opensAt = schedule.getOpensAt();
-			LocalTime endsAt = opensAt.plus(classDuration);
-			ClassStatus status=ClassStatus.NOT_SCHEDULED;
-			for (int classperday = schedule.getClassHoursPerDay(); classperday > 0; classperday--) {
-				ClassHour classHour = ClassHour.builder()
-						.beginsAt(LocalDateTime.of(currentDate, opensAt))
-						.endsAt(LocalDateTime.of(currentDate, endsAt))
-						.roomNo(null)
-						.classStatus(status)
-						.academicProgram(program)
-						.build();
+	    for (int dayOfWeek = 0; dayOfWeek < 6; dayOfWeek++) { // Iterate from Monday to Saturday
 
-				classHours.add(classHour);
+	        LocalDate currentDate = nextMonday.plusDays(dayOfWeek);
+	        LocalTime opensAt = schedule.getOpensAt();
+	        LocalTime endsAt = opensAt.plus(classDuration);
+	        ClassStatus status = ClassStatus.NOT_SCHEDULED;
 
-				if (breakTime.isAfter(opensAt.minus(topUp)) && breakTime.isBefore(endsAt.plus(topUp))) {
-					opensAt = opensAt.plus(breakDuration);
-					endsAt = endsAt.plus(breakDuration);
-				} else if (lunchTime.isAfter(opensAt.minus(topUp)) && lunchTime.isBefore(endsAt.plus(topUp))) {
-					opensAt = opensAt.plus(lunchDuration);
-					endsAt = endsAt.plus(lunchDuration);
-				}
+	        for (int classPerDay = schedule.getClassHoursPerDay(); classPerDay > 0; classPerDay--) {
+	            ClassHour classHour = ClassHour.builder()
+	                    .beginsAt(LocalDateTime.of(currentDate, opensAt))
+	                    .endsAt(LocalDateTime.of(currentDate, endsAt))
+	                    .roomNo(null)
+	                    .classStatus(status)
+	                    .academicProgram(program)
+	                    .build();
 
-				opensAt = endsAt;
-				endsAt = opensAt.plus(classDuration);
-			}
-		}
+	            classHours.add(classHour);
 
-		return classHours;
+	            if (breakTime.isAfter(opensAt.minus(topUp)) && breakTime.isBefore(endsAt.plus(topUp))) {
+	                opensAt = opensAt.plus(breakDuration);
+	                endsAt = endsAt.plus(breakDuration);
+	            } else if (lunchTime.isAfter(opensAt.minus(topUp)) && lunchTime.isBefore(endsAt.plus(topUp))) {
+	                opensAt = opensAt.plus(lunchDuration);
+	                endsAt = endsAt.plus(lunchDuration);
+	            }
+
+	            opensAt = endsAt;
+	            endsAt = opensAt.plus(classDuration);
+	        }
+	    }
+
+	    return classHours;
 	}
+
 
 	@Override
 	public ResponseEntity<ResponseStructure<List<ClassHourResponse>>> createClassHoursForWeek(int programId) {
@@ -100,7 +105,7 @@ public class ClassHourServiceImpl implements ClassHourService {
 			throw new IllegalArgumentException("Program Does Not Exist!!!");
 
 		LocalDate recordStartDate = (program.getBeginsAt().isAfter(LocalDate.now()))? program.getBeginsAt() : LocalDate.now();
-
+        
 		List<ClassHour> generatedClassHours = generateClassHoursForWeek(program, recordStartDate);
 		List<ClassHour> savedClassHours = classHourRepo.saveAll(generatedClassHours);
 
@@ -173,6 +178,50 @@ public class ClassHourServiceImpl implements ClassHourService {
 		responseStructure.setData("All ClassHour Deleted");
 		return new ResponseEntity<ResponseStructure<String>>(responseStructure, HttpStatus.OK);
 	}
+
+
+	@Override
+	public ResponseEntity<ResponseStructure<List<ClassHourResponse>>> repeatClassHour() {
+		ClassHour lastRecord = classHourRepo.findTopByOrderByClassHourIdDesc().get();
+        LocalDate endDate =lastRecord.getBeginsAt().toLocalDate();
+		AcademicProgram academicProgram=lastRecord.getAcademicProgram();
+		List<ClassHour> previousWeekClassHours = classHourRepo.findByAcademicProgramAndBeginsAtBetween(academicProgram, endDate.minusDays(5).atStartOfDay(), endDate.atStartOfDay().plusDays(1));
+        if (previousWeekClassHours.isEmpty()) {
+             throw new IllegalArgumentException("The classHour Is Empty");
+        }
+        List<ClassHour> savedClassHours = new ArrayList<>();
+        List<ClassHour> nextWeekClassHours = generateClassHoursForWeek(previousWeekClassHours.get(0).getAcademicProgram(), endDate);
+        nextWeekClassHours=classHourRepo.saveAll(nextWeekClassHours);
+  
+        for (ClassHour nextWeek : nextWeekClassHours) {
+            for (ClassHour previous : previousWeekClassHours) {
+               if(nextWeek.getBeginsAt().getDayOfWeek().equals(previous.getBeginsAt().getDayOfWeek())&&nextWeek.getBeginsAt().toLocalTime().equals(previous.getBeginsAt().toLocalTime())) {
+            	   if(previous.getClassStatus()!=ClassStatus.NOT_SCHEDULED) {
+            		   nextWeek.setRoomNo(previous.getRoomNo());
+            		   nextWeek.setClassStatus(ClassStatus.SCHEDULED);
+            		   nextWeek.setUser(previous.getUser());
+            		   nextWeek.setSubject(previous.getSubject());
+            		   ClassHour classHour=classHourRepo.save(nextWeek);
+            		   savedClassHours.add(classHour);
+            	   }
+               }
+               
+            }
+        }
+        
+        
+        List<ClassHourResponse> classHourResponses = savedClassHours.stream().map(this::mapToResponse).collect(Collectors.toList());
+
+        ResponseStructure<List<ClassHourResponse>> responseStructure = new ResponseStructure<>();
+        responseStructure.setStatus(HttpStatus.CREATED.value());
+        responseStructure.setMessage("ClassHours repeated successfully!!!!");
+        responseStructure.setData(classHourResponses);
+
+        return new ResponseEntity<>(responseStructure, HttpStatus.CREATED);
+	}
+
+
+	
 
 }
 
