@@ -1,6 +1,8 @@
 package com.school.sba.serviceImpl;
 
 import java.time.Duration;
+import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -27,7 +29,10 @@ public class ScheduleldServiceImpl implements ScheduleldService {
 			ScheduleldRequest scheduleldRequest) {
 		return schoolRepository.findById(schoolId).map(school->{
 			if(school.getScheduleld()==null) {
-				Scheduleld scheduleld = scheduleldRepository.save(mapToScheduleld(school,scheduleldRequest));
+				Scheduleld scheduleld=mapToScheduleld(school,scheduleldRequest);
+				validateSchedule(scheduleld);
+				validateBreaksAndLunch(scheduleld);
+				scheduleld = scheduleldRepository.save(scheduleld);
 				school.setScheduleld(scheduleld);
 				schoolRepository.save(school);
 				ResponseStructure<ScheduleldResponse> responseStructure = new ResponseStructure<ScheduleldResponse>();
@@ -43,18 +48,21 @@ public class ScheduleldServiceImpl implements ScheduleldService {
 	@Override
 	public ResponseEntity<ResponseStructure<ScheduleldResponse>> findScheduleBySchoolId(int schoolId) {
 		return schoolRepository.findById(schoolId).map(school->{
-		ResponseStructure<ScheduleldResponse> responseStructure = new ResponseStructure<ScheduleldResponse>();
-		responseStructure.setStatus(HttpStatus.FOUND.value());
-		responseStructure.setMessage("Scheduleld Fetched successfully!!!!");
-		responseStructure.setData(mapToResponse(school.getScheduleld()));
-		return new ResponseEntity<ResponseStructure<ScheduleldResponse>>(responseStructure, HttpStatus.FOUND);
+			ResponseStructure<ScheduleldResponse> responseStructure = new ResponseStructure<ScheduleldResponse>();
+			responseStructure.setStatus(HttpStatus.FOUND.value());
+			responseStructure.setMessage("Scheduleld Fetched successfully!!!!");
+			responseStructure.setData(mapToResponse(school.getScheduleld()));
+			return new ResponseEntity<ResponseStructure<ScheduleldResponse>>(responseStructure, HttpStatus.FOUND);
 		}).orElseThrow(()->new IllegalArgumentException("School Does Not Exist!!!"));
 	}
 	@Override
 	public ResponseEntity<ResponseStructure<ScheduleldResponse>> updateScheduleById(int scheduleldId,
 			ScheduleldRequest scheduleldRequest) {
 		return scheduleldRepository.findById(scheduleldId).map(scheduleld->{
-			scheduleldRepository.save(mapToUpdate(scheduleldId, scheduleldRequest));
+			Scheduleld schedule=mapToUpdate(scheduleldId, scheduleldRequest);
+			validateSchedule(schedule);
+			validateBreaksAndLunch(schedule);
+			scheduleldRepository.save(schedule);
 			ResponseStructure<ScheduleldResponse> responseStructure = new ResponseStructure<ScheduleldResponse>();
 			responseStructure.setStatus(HttpStatus.OK.value());
 			responseStructure.setMessage("Scheduleld Updated successfully!!!!");
@@ -100,4 +108,32 @@ public class ScheduleldServiceImpl implements ScheduleldService {
 				.lunchTime(scheduleldRequest.getLunchTime())
 				.build();
 	}
+	private void validateSchedule(Scheduleld scheduleld) {
+		LocalTime opensAt = scheduleld.getOpensAt();
+		LocalTime closesAt = scheduleld.getClosesAt();
+
+		long totalMinutes = opensAt.until(closesAt, ChronoUnit.MINUTES);
+		long expectedTotalMinutes = (scheduleld.getClassHoursPerDay() * scheduleld.getClassHourLengthInMin().toMinutes()) +
+				scheduleld.getBreakLengthInMin().toMinutes() +
+				scheduleld.getLunchLengthInMin().toMinutes();
+
+		if (totalMinutes != expectedTotalMinutes) {
+			throw new IllegalArgumentException("Total hours do not add up correctly");
+		}
+	}
+
+	private void validateBreaksAndLunch(Scheduleld scheduleld) {
+		LocalTime breakTime = scheduleld.getBreakTime();
+		LocalTime lunchTime = scheduleld.getLunchTime();
+		LocalTime opensAt = scheduleld.getOpensAt();
+        Duration classTime=scheduleld.getClassHourLengthInMin();
+		long totalBreakMinutes = opensAt.until(breakTime, ChronoUnit.MINUTES);
+		long totalLunchMinutes = opensAt.until(lunchTime, ChronoUnit.MINUTES);
+		totalLunchMinutes=totalBreakMinutes-scheduleld.getLunchLengthInMin().toMinutes();
+        if(!(totalBreakMinutes%(classTime.toMinutes())==0&&totalLunchMinutes%classTime.toMinutes()==0)) {
+			throw new IllegalArgumentException("Break and lunch should start after a class hour ends");
+        }
+	}
+
 }
+
