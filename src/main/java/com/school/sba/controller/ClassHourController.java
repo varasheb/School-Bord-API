@@ -1,5 +1,6 @@
 package com.school.sba.controller;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.school.sba.requestDTO.ClassHourDTO;
+import com.school.sba.requestDTO.ExelRequestDTO;
 import com.school.sba.responseDTO.ClassHourResponse;
 import com.school.sba.service.ClassHourService;
 import com.school.sba.util.ResponseStructure;
@@ -42,5 +44,9 @@ public class ClassHourController {
 	@PreAuthorize("hasAuthority('ADMIN')")
 	public ResponseEntity<ResponseStructure<List<ClassHourResponse>>> repeatClassHour() {
 		return classhourService.repeatClassHour();
+	}
+	@PostMapping("/academic-program/{programId}/class-hours/write-exel")
+	public ResponseEntity<ResponseStructure<String>> updateClassHourInExelSheet(@PathVariable int programId,@RequestBody ExelRequestDTO exelRequestDto) {
+		return classhourService.updateClassHourInExel(programId,exelRequestDto);
 	}
 }
